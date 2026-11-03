@@ -3,15 +3,18 @@ const router = express.Router();
 const supabase = require('../db');
 const { uploadToCloudinary } = require('../utils/cloudinaryUtils');
 
-// Get all poets
+// Get all poets, ordered by number of poems (most first), then by name
 router.get('/', async (req, res) => {
     const { data: poets, error } = await supabase
         .from('poets')
-        .select('*')
-        .order('name', { ascending: true });
-        
+        .select('*, poems(count)');
+
     if (error) return res.status(500).json({ error: error.message });
-    res.json(poets);
+
+    const sorted = poets
+        .map(({ poems, ...poet }) => ({ ...poet, poems_count: poems?.[0]?.count ?? 0 }))
+        .sort((a, b) => b.poems_count - a.poems_count || a.name.localeCompare(b.name));
+    res.json(sorted);
 });
 
 // Create poet
