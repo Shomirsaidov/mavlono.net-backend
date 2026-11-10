@@ -86,6 +86,7 @@ router.get('/:id', async (req, res) => {
         .eq('id', req.params.id)
         .single();
         
+    if (error && error.code === 'PGRST116') return res.status(404).json({ error: 'Poet not found' });
     if (error) return res.status(500).json({ error: error.message });
     if (!poet) return res.status(404).json({ error: 'Poet not found' });
     

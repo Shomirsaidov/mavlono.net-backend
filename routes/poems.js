@@ -143,6 +143,23 @@ router.get('/category', async (req, res) => {
     res.json(poems);
 });
 
+// Lightweight list of every poem (id + date) for the frontend's sitemap.xml
+router.get('/sitemap/all', async (req, res) => {
+    const rows = [];
+    const pageSize = 1000;
+    for (let from = 0; ; from += pageSize) {
+        const { data, error } = await supabase
+            .from('poems')
+            .select('id, created_at')
+            .order('id', { ascending: true })
+            .range(from, from + pageSize - 1);
+        if (error) return res.status(500).json({ error: error.message });
+        rows.push(...data);
+        if (data.length < pageSize) break;
+    }
+    res.json(rows);
+});
+
 // Get a poem by ID
 router.get('/:id', async (req, res) => {
     const { data: poem, error } = await supabase
@@ -162,6 +179,8 @@ router.get('/:id', async (req, res) => {
         .eq('id', req.params.id)
         .single();
         
+    // PGRST116 = no row matched: answer 404 (not 500) so the frontend can serve a real 404 page
+    if (error && error.code === 'PGRST116') return res.status(404).json({ error: 'Poem not found' });
     if (error) return res.status(500).json({ error: error.message });
     if (!poem) return res.status(404).json({ error: 'Poem not found' });
     
