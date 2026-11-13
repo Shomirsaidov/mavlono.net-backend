@@ -160,6 +160,24 @@ router.get('/sitemap/all', async (req, res) => {
     res.json(rows);
 });
 
+// Lightweight index of every poem (id, opening text, poet) so the catalog can render
+// plain, crawlable links to each poem page. Must be declared before '/:id'.
+router.get('/index/all', async (req, res) => {
+    const rows = [];
+    const pageSize = 1000;
+    for (let from = 0; ; from += pageSize) {
+        const { data, error } = await supabase
+            .from('poems')
+            .select('id, content, poet_id')
+            .order('id', { ascending: true })
+            .range(from, from + pageSize - 1);
+        if (error) return res.status(500).json({ error: error.message });
+        rows.push(...data.map(p => ({ id: p.id, poet_id: p.poet_id, content: String(p.content || '').slice(0, 200) })));
+        if (data.length < pageSize) break;
+    }
+    res.json(rows);
+});
+
 // Get a poem by ID
 router.get('/:id', async (req, res) => {
     const { data: poem, error } = await supabase
