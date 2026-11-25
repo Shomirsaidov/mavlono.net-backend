@@ -22,7 +22,6 @@ router.post('/send', async (req, res) => {
             body: JSON.stringify({
                 model: MODEL,
                 max_tokens: 1000,
-                temperature: 0.5,
                 system: 'answer only in tajik language. i will send you tajik poems and dont even try to conitnue them or to guess the author, the only thing you have to do is to tell how you understand each line of the poem and the idea of this specific provided piece in general',
                 messages: [
                     { role: 'user', content: `Лутфан ин шеърро шарҳ диҳед:\n\n${query}` }
