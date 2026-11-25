@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 
-// Retrieve Cerebras token from standard env logic
-const CEREBRAS_API_KEY = process.env.CEREBRAS_API_KEY;
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5';
 
 router.post('/send', async (req, res) => {
     const { query } = req.body;
@@ -12,43 +12,38 @@ router.post('/send', async (req, res) => {
     }
 
     try {
-        const response = await fetch('https://api.cerebras.ai/v1/chat/completions', {
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${CEREBRAS_API_KEY}`,
+                'x-api-key': ANTHROPIC_API_KEY,
+                'anthropic-version': '2023-06-01',
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: 'llama3.1-70b',
-                messages: [
-                    {
-                        role: 'system',
-                        content: 'answer only in tajik language. i will send you tajik poems and dont even try to conitnue them or to guess the author, the only thing you have to do is to tell how you understand each line of the poem and the idea of this specific provided piece in general'
-                    },
-                    {
-                        role: 'user',
-                        content: `Лутфан ин шеърро шарҳ диҳед:\n\n${query}`
-                    }
-                ],
+                model: MODEL,
+                max_tokens: 1000,
                 temperature: 0.5,
-                max_completion_tokens: 1000
+                system: 'answer only in tajik language. i will send you tajik poems and dont even try to conitnue them or to guess the author, the only thing you have to do is to tell how you understand each line of the poem and the idea of this specific provided piece in general',
+                messages: [
+                    { role: 'user', content: `Лутфан ин шеърро шарҳ диҳед:\n\n${query}` }
+                ]
             })
         });
 
         if (!response.ok) {
             const errData = await response.json().catch(() => ({}));
-            console.error("Cerebras API Raw Error payload:", errData);
-            throw new Error(errData.error?.message || errData.message || 'Cerebras API returned an error.');
+            console.error('Anthropic API error:', errData);
+            throw new Error(errData.error?.message || 'Anthropic API returned an error.');
         }
 
         const data = await response.json();
-        const aiResponse = data.choices[0].message.content;
-        
+        const aiResponse = data.content.filter(b => b.type === 'text').map(b => b.text).join('');
+
         res.json({ response: aiResponse });
 
     } catch (error) {
         console.error('AI Interpretation Error:', error);
-        res.status(500).json({ error: 'Failed to interpret poem using Cerebras.' });
+        res.status(500).json({ error: 'Failed to interpret poem using Claude.' });
     }
 });
 
